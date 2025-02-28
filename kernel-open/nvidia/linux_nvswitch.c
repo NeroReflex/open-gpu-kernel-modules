@@ -100,6 +100,7 @@ nvswitch_map_status
 
 static int nvswitch_probe(struct pci_dev *, const struct pci_device_id *);
 static void nvswitch_remove(struct pci_dev *);
+static void nvswitch_shutdown(struct pci_dev *);
 
 static struct pci_device_id nvswitch_pci_table[] =
 {
@@ -120,7 +121,7 @@ static struct pci_driver nvswitch_pci_driver =
     .id_table       = nvswitch_pci_table,
     .probe          = nvswitch_probe,
     .remove         = nvswitch_remove,
-    .shutdown       = nvswitch_remove
+    .shutdown       = nvswitch_shutdown
 };
 
 //
@@ -1415,10 +1416,11 @@ find_minor_failed:
     return rc;
 }
 
-void
-nvswitch_remove
+static void
+nvswitch_exit
 (
-    struct pci_dev *pci_dev
+    struct pci_dev *pci_dev,
+    bool shutdown
 )
 {
     NVSWITCH_DEV *nvswitch_dev;
@@ -1465,7 +1467,11 @@ nvswitch_remove
     pci_clear_master(pci_dev);
 #endif
 
-    pci_disable_device(pci_dev);
+    // To avoid a double-shutdown only do this on driver remove
+    // as the corresponding pci_enable_device is done in probe
+    if (!shutdown) {
+        pci_disable_device(pci_dev);
+    }
 
     nvswitch_procfs_device_remove(nvswitch_dev);
 
@@ -1479,6 +1485,22 @@ done:
     mutex_unlock(&nvswitch.driver_mutex);
 
     return;
+}
+
+void
+nvswitch_remove
+(
+    struct pci_dev *pci_dev
+) {
+    nvswitch_exit(pci_dev, false);
+}
+
+void
+nvswitch_shutdown
+(
+    struct pci_dev *pci_dev
+) {
+    nvswitch_exit(pci_dev, true);
 }
 
 static void
