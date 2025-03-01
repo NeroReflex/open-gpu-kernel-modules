@@ -50,6 +50,8 @@
 
 #include "ioctl_nvswitch.h"
 
+static int test_probe_refcount = 0;
+
 static const struct
 {
     NvlStatus status;
@@ -1315,6 +1317,24 @@ nvswitch_probe
         goto pci_enable_device_failed;
     }
 
+    printk(KERN_ERR "MERDA %s: current PCI device power state : %d\n",
+        nvswitch_dev->name,
+        (int)pci_dev->current_state);
+
+    rc = pci_set_power_state(pci_dev, PCI_D0);
+    if (rc)
+    {
+        printk(KERN_ERR "MERDA %s: Failed to set PCI power state to D0 : %d\n",
+               nvswitch_dev->name,
+               rc);
+        goto pci_enable_device_failed;
+    } else {
+        test_probe_refcount++;
+        printk(KERN_ERR "MERDA %s: PCI power state set to D0 : %d\n",
+            nvswitch_dev->name,
+            test_probe_refcount);
+    }
+
     pci_set_master(pci_dev);
 
     rc = pci_request_regions(pci_dev, nvswitch_dev->name);
@@ -1417,7 +1437,7 @@ find_minor_failed:
 }
 
 static void
-nvswitch_exit
+nvswitch_exit_driver
 (
     struct pci_dev *pci_dev,
     bool shutdown
@@ -1467,11 +1487,16 @@ nvswitch_exit
     pci_clear_master(pci_dev);
 #endif
 
-    // To avoid a double-shutdown only do this on driver remove
-    // as the corresponding pci_enable_device is done in probe
-    if (!shutdown) {
-        pci_disable_device(pci_dev);
+    test_probe_refcount--;
+    if (shutdown) {
+        printk(KERN_ERR "MERDA %s : shutdown %d",
+            nvswitch_dev->name, test_probe_refcount);
+    } else {
+        printk(KERN_ERR "MERDA %s : remove %d",
+            nvswitch_dev->name, test_probe_refcount);
     }
+
+    pci_disable_device(pci_dev);
 
     nvswitch_procfs_device_remove(nvswitch_dev);
 
@@ -1492,7 +1517,7 @@ nvswitch_remove
 (
     struct pci_dev *pci_dev
 ) {
-    nvswitch_exit(pci_dev, false);
+    nvswitch_exit_driver(pci_dev, false);
 }
 
 void
@@ -1500,7 +1525,7 @@ nvswitch_shutdown
 (
     struct pci_dev *pci_dev
 ) {
-    nvswitch_exit(pci_dev, true);
+    nvswitch_exit_driver(pci_dev, true);
 }
 
 static void
