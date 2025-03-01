@@ -47,6 +47,8 @@
 
 extern int NVreg_GrdmaPciTopoCheckOverride;
 
+static int test_probe_refcount = 0;
+
 static void
 nv_check_and_exclude_gpu(
     nvidia_stack_t *sp,
@@ -644,6 +646,21 @@ nv_pci_probe
         goto failed;
     }
 
+    printk(KERN_ERR "CACCA: current PCI device power state : %d\n",
+        (int)pci_dev->current_state);
+
+    int rc = pci_set_power_state(pci_dev, PCI_D0);
+    if (rc)
+    {
+        printk(KERN_ERR "CACCA: Failed to set PCI power state to D0 : %d\n",
+               rc);
+        goto failed;
+    } else {
+        test_probe_refcount++;
+        printk(KERN_ERR "CACCA: PCI power state set to D0 : %d\n",
+            test_probe_refcount);
+    }
+
     if ((pci_dev->irq == 0 && !pci_find_capability(pci_dev, PCI_CAP_ID_MSIX))
         && nv_treat_missing_irq_as_error())
     {
@@ -1132,6 +1149,10 @@ nv_pci_remove(struct pci_dev *pci_dev)
     if (NV_ATOMIC_READ(nvl->usage_count) == 0)
     {
         NV_PCI_DISABLE_DEVICE(pci_dev);
+
+        test_probe_refcount--;
+        printk(KERN_ERR "CACCA: pci_remove %d", test_probe_refcount);
+
         NV_KFREE(nvl, sizeof(nv_linux_state_t));
     }
     else
