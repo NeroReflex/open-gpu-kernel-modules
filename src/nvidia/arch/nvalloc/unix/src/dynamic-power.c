@@ -795,14 +795,30 @@ void NV_API_CALL rm_init_dynamic_power_management(
     }
 
     nvp->pr3_acpi_method_present = bPr3AcpiMethodPresent;
+
+    if (status != NV_OK) {
+        NV_PRINTF(LEVEL_ERROR,
+                  "%s: FUCK shit."
+                  "\n", __FUNCTION__);
+        option = NV_REG_DYNAMIC_POWER_MANAGEMENT_FINE;
+    }
+
+    if (!bPr3AcpiMethodPresent) {
+        NV_PRINTF(LEVEL_ERROR,
+                  "%s: FUCK you miss _PR3."
+                  "\n", __FUNCTION__);
+        option = NV_REG_DYNAMIC_POWER_MANAGEMENT_FINE;
+    }
+
+
     if (!nv_dynamic_power_available(nv) || !bPr3AcpiMethodPresent ||
         (status != NV_OK))
     {
-        NV_PRINTF(LEVEL_NOTICE,
-                  "%s: Disabling dynamic power management either due to lack"
+        NV_PRINTF(LEVEL_ERROR,
+                  "%s: FUCK Disabling dynamic power management either due to lack"
                   " of system support or due to error (%d) in reading regkey."
                   "\n", __FUNCTION__, status);
-        option = NV_REG_DYNAMIC_POWER_MANAGEMENT_NEVER;
+        option = NV_REG_DYNAMIC_POWER_MANAGEMENT_FINE;
     }
 
     /*
@@ -836,18 +852,24 @@ void NV_API_CALL rm_init_dynamic_power_management(
     switch (option)
     {
     case NV_REG_DYNAMIC_POWER_MANAGEMENT_FINE:
+        NV_PRINTF(LEVEL_ERROR,
+                  "%s: FUCK OK NV_REG_DYNAMIC_POWER_MANAGEMENT_FINE"
+                  "\n", __FUNCTION__);
         nvp->dynamic_power.mode = NV_DYNAMIC_PM_FINE;
         break;
     case NV_REG_DYNAMIC_POWER_MANAGEMENT_COARSE:
+        NV_PRINTF(LEVEL_ERROR,
+                    "%s: FUCK OK NV_REG_DYNAMIC_POWER_MANAGEMENT_COARSE"
+                    "\n", __FUNCTION__);
         nvp->dynamic_power.mode = NV_DYNAMIC_PM_COARSE;
         break;
     default:
         nv_printf(LEVEL_ERROR,
-                  "NVRM: Unknown DynamicPowerManagement value '%u' specified; "
+                  "NVRM: FUCK Unknown DynamicPowerManagement value '%u' specified; "
                   "disabling dynamic power management.\n", option);
         // fallthrough
     case NV_REG_DYNAMIC_POWER_MANAGEMENT_NEVER:
-        nvp->dynamic_power.mode = NV_DYNAMIC_PM_NEVER;
+        nvp->dynamic_power.mode = NV_DYNAMIC_PM_FINE;
         break;
     }
 
@@ -855,7 +877,14 @@ void NV_API_CALL rm_init_dynamic_power_management(
     if ((nvp->dynamic_power.mode == NV_DYNAMIC_PM_FINE) &&
         (nvp->dynamic_power.dynamic_power_regkey == NV_REG_DYNAMIC_POWER_MANAGEMENT_DEFAULT))
     {
+        NV_PRINTF(LEVEL_ERROR,
+                    "%s: FUCK THIS IS FINE"
+                    "\n", __FUNCTION__);
         nv_allow_runtime_suspend(nv);
+    } else {
+        NV_PRINTF(LEVEL_ERROR,
+                    "%s: FUCK THIS IS BAD"
+                    "\n", __FUNCTION__);
     }
 
     // Legacy case: check if device is primary and driven by VBIOS or fb driver.
@@ -880,6 +909,10 @@ void NV_API_CALL rm_init_dynamic_power_management(
     nvp->dynamic_power.refcount = 1;
     nv_dynamic_power_state_transition(nv, NV_DYNAMIC_POWER_STATE_UNKNOWN,
                                       NV_DYNAMIC_POWER_STATE_IN_USE);
+
+    NV_PRINTF(LEVEL_ERROR,
+                    "%s: FUCK I AM DONE"
+                    "\n", __FUNCTION__);
 done:
     NV_EXIT_RM_RUNTIME(sp,fp);
 }
